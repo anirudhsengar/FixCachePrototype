@@ -56,18 +56,9 @@ class FixCache:
         Returns:
             bool: True if the commit is a bug fix, False otherwise.
         """
+        keywords = ["fix", "bug", "defect", "closes #", "fixes #", "resolve", "corrected"]
         message = commit.message.lower()
-
-        # Check for issue references (e.g., "JDK-123456" or "123456: ")
-        if re.search(r'jdk-\d+', message) or re.match(r'^\d+:', message):
-            # Optionally refine further with keywords or title analysis
-            keywords = ["fix", "fixed", "bug", "resolved", "corrected"]
-            if any(keyword in message for keyword in keywords):
-                return True
-            # Assume issue reference alone is sufficient in OpenJDK context
-            return True
-
-        return False
+        return any(keyword in message for keyword in keywords)
 
     def process_commits(self, max_commits=None):
         """
