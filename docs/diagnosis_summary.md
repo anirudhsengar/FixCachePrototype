@@ -78,7 +78,7 @@ I’d appreciate your insights on:
 - Recommendations for implementing Approach B after reviewing the paper.
 - Whether I am on the right track and focusing on the right aspects of the project.
 
-Thank you for your mentorship. Here’s a link to my GitHub repository: https://github.com/anirudhsengar/FixCachePrototype. The codebase is in progress but includes analysis scripts. I’m eager to discuss further.
+The codebase is in progress but includes analysis scripts. I’m eager to discuss further.
 
 ---
 
