@@ -72,13 +72,7 @@ This report outlines the progress of my project focused on improving the quality
 ## Conclusion
 The project has successfully prototyped Approach A on `openjdk/jdk` and a small repository, revealing a 50.53% and 25% overlap, respectively. Ongoing tasks focus on evaluating Approach A and planning for Approach B, with future efforts targeting testing and alternative methods. I’m excited about the potential but seek your guidance.
 
-### Request for Feedback
-I’d appreciate your insights on:
-- The effectiveness of Approach A and suggested adaptations for small repositories.
-- Recommendations for implementing Approach B after reviewing the paper.
-- Whether I am on the right track and focusing on the right aspects of the project.
-
-The codebase is in progress but includes analysis scripts. I’m eager to discuss further.
+The codebase is in progress but includes analysis scripts.
 
 ---
 
