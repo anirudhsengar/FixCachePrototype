@@ -1,5 +1,6 @@
 from git import Repo
 import os
+import re
 
 
 class FixCache:
@@ -55,9 +56,18 @@ class FixCache:
         Returns:
             bool: True if the commit is a bug fix, False otherwise.
         """
-        keywords = ["fix", "bug", "defect", "closes #", "fixes #", "resolve"]
         message = commit.message.lower()
-        return any(keyword in message for keyword in keywords)
+
+        # Check for issue references (e.g., "JDK-123456" or "123456: ")
+        if re.search(r'jdk-\d+', message) or re.match(r'^\d+:', message):
+            # Optionally refine further with keywords or title analysis
+            keywords = ["fix", "fixed", "bug", "resolved", "corrected"]
+            if any(keyword in message for keyword in keywords):
+                return True
+            # Assume issue reference alone is sufficient in OpenJDK context
+            return True
+
+        return False
 
     def process_commits(self, max_commits=None):
         """
@@ -140,7 +150,7 @@ class FixCache:
 
 if __name__ == "__main__":
     # Example usage
-    local_repo_path = r"C:\Users\aniru\OneDrive\Desktop\openj9"
+    local_repo_path = r"C:\Users\aniru\OneDrive\Desktop\openjdk"
     try:
         cache = FixCache(local_repo_path, cache_size_percent=0.2)
         cache.process_commits(max_commits=500)  # Limit to 500 commits for large repos
