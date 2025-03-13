@@ -82,6 +82,5 @@ The codebase is in progress but includes analysis scripts. I’m eager to discus
 
 ---
 
-Best regards,  
 Anirudh Sengar
 March 13, 2025
