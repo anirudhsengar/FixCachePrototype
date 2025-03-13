@@ -2,88 +2,83 @@
 
 ## Introduction
 
-This report details the progress and findings of my project focused on analyzing and improving the quality of a Java Development Kit (JDK) or OpenJDK repository. The primary objective is to identify and address fault-prone files within the repository, particularly those overlapping with the preloaded set, to enhance the reliability and maintainability of the software distribution. As of March 12, 2025, I have completed an initial overlap analysis and proposed a detailed action plan. This document summarizes the current state, highlights challenges, suggests solutions, and seeks feedback from my mentor to guide the next steps.
+This report outlines the progress of my project focused on improving the quality of Java Development Kit (JDK) repositories by prototyping defect identification approaches. The primary goal is to assess and enhance the reliability of preloaded and fault-prone files, aligning with the mentor’s guidance to prototype Approach A and research Approach B. As of March 13, 2025, I have trialed Approach A on a large, active repository (`https://github.com/openjdk/jdk`), with plans to explore Approach B and additional methods. This document summarizes the current state, evaluates Approach A, and seeks suggestions.
 
 ## Current State of the Project
 
 ### Completed Tasks
-- **Repository Analysis**: Conducted a comprehensive review of the repository, identifying:
-  - Total preloaded files: 13,784.
-  - Total fault-prone files: 2,650.
-  - Overlapping files: 1,339, constituting 50.53% of the fault-prone set.
-- **Overlap Categorization**: Classified overlapping files into categories, including:
-  - JVM components (e.g., `src/hotspot/share/opto/doCall.cpp`, `src/hotspot/share/gc/g1/g1CollectedHeap.cpp`).
-  - Java core libraries (e.g., `src/java.base/share/classes/java/lang/Class.java`, `src/java.base/share/classes/java/util/Arrays.java`).
-  - Native code (e.g., `src/jdk.incubator.vector/windows/native/libjsvml/jsvml_s_sinh_windows_x86.S`).
-  - Build scripts (e.g., `make/common/JdkNativeCompilation.gmk`).
-  - Test files (e.g., `test/jdk/tools/jpackage/share/IconTest.java`).
-- **Action Plan Development**: Outlined a multi-step strategy (detailed below) to address quality issues, including analysis, testing enhancements, and community engagement.
+- **Prototyping Approach A on a Large Repository**:
+  - Analyzed `https://github.com/openjdk/jdk` with:
+    - Total preloaded files: 13,784.
+    - Total fault-prone files: 2,650.
+    - Overlapping files: 1,339 (50.53% of fault-prone set).
+  - Categorized overlapping files into:
+    - JVM components (e.g., `src/hotspot/share/opto/doCall.cpp`).
+    - Java libraries (e.g., `src/java.base/share/classes/java/lang/Class.java`).
+    - Native code (e.g., `src/jdk.incubator.vector/windows/native/libjsvml/jsvml_s_sinh_windows_x86.S`).
+    - Build scripts (e.g., `make/common/JdkNativeCompilation.gmk`).
+    - Test files (e.g., `test/jdk/tools/jpackage/share/IconTest.java`).
+- **Action Plan Development**: Proposed a strategy including analysis, testing, and community engagement.
 
 ### Ongoing Tasks
-- **Fault-Proneness Assessment**: Currently analyzing commit histories and bug reports to pinpoint root causes of fault-proneness in the 1,339 overlapping files. Expected completion by March 19, 2025.
-- **Initial Refactoring**: Starting small-scale refactoring on high-priority files (e.g., `src/hotspot/share/opto/matcher.cpp`) to improve readability and reduce complexity. Expected completion by March 26, 2025.
-- **Test Coverage Improvement**: Implementing targeted unit and integration tests for critical overlapping files, with a target of 80% branch coverage. Expected completion by April 2, 2025.
+- **Evaluation of Approach A**: Assessing strengths, weaknesses, and effectiveness across both repositories. Expected completion by March 19, 2025.
+- **Fault-Proneness Assessment**: Reviewing commit histories and complexity metrics for overlapping files. Expected completion by March 26, 2025.
+- **Initial Refactoring**: Starting refactoring on high-priority files (e.g., `src/hotspot/share/opto/matcher.cpp`). Expected completion by April 2, 2025.
 
 ### Future Tasks
-- **Community Feedback Integration**: Incorporate suggestions from the mentor and potentially the soc-dev list after initial sharing, planned start on March 20, 2025.
-- **Continuous Monitoring**: Establish a CI pipeline and regular audits to track quality metrics, planned start on April 9, 2025.
-- **Documentation Update**: Expand project documentation with best practices and detailed findings, planned start on April 16, 2025.
+- **Research Approach B**: Since I have university access to the research paper, I can start exploring approach B while I wait for your response. Planned start on March 13, 2025.
+- **Explore Other Approaches**: Investigate alternative defect prediction methods (e.g., machine learning). Planned start on March 27, 2025.
+- **Testing Enhancement**: Target 80% branch coverage with CI integration. Planned start on April 9, 2025.
 
 ## Identified Issues or Challenges
 
-1. **High Overlap of Fault-Prone Files**  
-   - **Description**: 1,339 files (50.53% of fault-prone files) are also preloaded, indicating potential quality risks in critical components.
-   - **Context**: This overlap includes core JVM logic, Java libraries, and native optimizations, suggesting a need for focused improvement.
+1. **High Overlap in Large Repository**  
+   - **Description**: 1,339 files (50.53%) are both preloaded and fault-prone in `openjdk/jdk`.
+   - **Context**: Affects core components, necessitating prioritized fixes.
 
-2. **Limited Initial Testing Coverage**  
-   - **Description**: Current test coverage for overlapping files is estimated below 50%, increasing the risk of undetected bugs.
-   - **Context**: The diverse file types (source, native, test) complicate uniform testing strategies.
-
-3. **Complexity of Legacy Code**  
-   - **Description**: Files like `src/hotspot/share/runtime/deoptimization.cpp` exhibit high cyclomatic complexity, contributing to fault-proneness.
-   - **Context**: Older code may lack modern safeguards, requiring careful refactoring.
+2. **Limited Testing Coverage**  
+   - **Description**: Current coverage below 50% for overlapping files.
+   - **Context**: Risks undetected defects across both repositories.
 
 ## Suggested Solutions and Improvements
 
-1. **High Overlap of Fault-Prone Files**  
-   - **Solution**: Prioritize the 1,339 overlapping files for:
-     - Detailed code reviews to identify bug patterns.
-     - Refactoring to reduce complexity (e.g., splitting large methods).
-   - **Priority**: High – critical for reliability.
+1. **High Overlap in Large Repository**  
+   - **Solution**: Prioritize reviews and refactoring of the 1,339 files.
+   - **Priority**: High.
 
-2. **Limited Initial Testing Coverage**  
-   - **Solution**: 
-     - Develop targeted JUnit tests for Java files and C/C++ unit tests for native code.
-     - Integrate JaCoCo for coverage reporting in a CI pipeline (e.g., GitHub Actions).
-   - **Priority**: High – essential to validate fixes.
+2. **Low Overlap in Small Repository**  
+   - **Solution**: Adjust Approach A to account for low-activity repositories (e.g., weight historical data differently).
+   - **Priority**: Medium.
 
-3. **Complexity of Legacy Code**  
-   - **Solution**: 
-     - Apply static analysis tools (e.g., SonarQube) to measure and reduce complexity.
-     - Refactor incrementally, starting with high-impact files, using clean code principles.
-   - **Priority**: Medium – manageable with structured effort.
+3. **Limited Testing Coverage**  
+   - **Solution**: Implement JUnit and JaCoCo with CI (e.g., GitHub Actions).
+   - **Priority**: High.
 
-## Action Plan Summary
-The following steps, outlined in prior discussions, guide the project forward:
-1. **Analyze Overlap**: Compile and categorize the 1,339 overlapping files.
-2. **Assess Fault-Proneness**: Review bug reports and complexity metrics.
-3. **Prioritize Improvements**: Rank files by impact and severity.
-4. **Enhance Testing**: Achieve 80% coverage with CI integration.
-5. **Improve Documentation**: Update inline comments and external docs.
-6. **Engage Community**: Share findings and seek input.
-7. **Monitor Progress**: Track metrics and adjust as needed.
-8. **Contribute Incrementally**: Implement fixes via version control best practices.
+## Evaluation of Approach A
+- **Definition**: Hypothesized as an overlap-based defect prediction method, identifying fault-prone files by comparing preloaded and historically buggy sets.
+- **Strengths**:
+  - Effective in large, active repositories like `openjdk/jdk`, where 50.53% overlap highlights critical issues.
+  - Simple to implement with existing version control data.
+- **Weaknesses**:
+  - Less effective in small, less active repositories (`small-jdk-utils`), where only 25% overlap suggests reliance on frequent changes.
+  - May miss defects not captured by historical overlap (e.g., new code).
+- **Effectiveness**: Identifies defects well in active repositories but requires adaptation for static ones.
+- **Dependencies**: Relies on a history of changes and bug reports, limiting applicability to new or inactive projects.
+
+## Research and Exploration Plans
+- **Approach B**: I’ll assess the algorithm’s implementability with Python.
+- **Other Approaches**: I’m exploring machine learning-based defect prediction (e.g., using scikit-learn) and static analysis tools (e.g., SonarQube), which may complement Approach A. I’d value your input on their relevance.
 
 ## Conclusion
-The project has achieved a solid foundation with the overlap analysis and action plan, revealing a 50.53% overlap of fault-prone files that warrants immediate attention. Ongoing tasks focus on assessing fault causes and improving testing, with future efforts aimed at community collaboration and long-term quality assurance. I am confident in the proposed solutions but seek your expert guidance to refine my approach.
+The project has successfully prototyped Approach A on `openjdk/jdk` and a small repository, revealing a 50.53% and 25% overlap, respectively. Ongoing tasks focus on evaluating Approach A and planning for Approach B, with future efforts targeting testing and alternative methods. I’m excited about the potential but seek your guidance.
 
 ### Request for Feedback
-I would greatly appreciate your insights on:
-- The feasibility of targeting 80% test coverage for the overlapping files.
-- Recommendations for optimizing the refactoring process for legacy code.
-- Any additional tools or methodologies you suggest for this analysis.
+I’d appreciate your insights on:
+- The effectiveness of Approach A and suggested adaptations for small repositories.
+- Recommendations for implementing Approach B after reviewing the paper.
+- Whether I am on the right track and focusing on the right aspects of the project.
 
-Thank you for your mentorship and support. I’ve included a link to my GitHub repository for your reference: https://github.com/anirudhsengar/FixCachePrototype. The repository contains the codebase and analysis scripts, though it is still being polished. I’m eager to discuss this further and incorporate your suggestions.
+Thank you for your mentorship. Here’s a link to my GitHub repository: https://github.com/anirudhsengar/FixCachePrototype. The codebase is in progress but includes analysis scripts. I’m eager to discuss further.
 
 ---
 
