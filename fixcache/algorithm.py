@@ -59,6 +59,9 @@ class FixCache:
             window_ratio: Ratio of commits to use for training window
             cache_seeding: Whether to seed cache with most bug-prone files
         """
+        # Store the repository path
+        self.repo_path = repo_path if isinstance(repo_path, str) else getattr(repo_path, 'repo_path', 'Unknown')
+
         # Initialize repository analyzer
         if isinstance(repo_path, str):
             self.repo_analyzer = RepositoryAnalyzer(
@@ -556,28 +559,39 @@ class FixCache:
 
         return recommendations
 
-    def get_summary(self) -> Dict[str, Any]:
+    def get_summary(self):
         """
-        Get a summary of prediction results.
+        Get a summary of the analysis results.
 
         Returns:
-            Dictionary with summary information
+            Dict[str, Any]: Summary of analysis results
         """
-        if not self.results:
-            logger.warning("No prediction results available. Run predict() first.")
-            return {}
+        total_files = len(self.repo_analyzer.all_files) if hasattr(self.repo_analyzer, 'all_files') else 0
+        total_commits = len(self.repo_analyzer.all_commits) if hasattr(self.repo_analyzer, 'all_commits') else 0
+        bug_fixes = len(self.repo_analyzer.bug_fixes) if hasattr(self.repo_analyzer, 'bug_fixes') else 0
 
-        return {
-            'repository': os.path.basename(self.repo_analyzer.repo_path),
-            'total_files': self.repo_analyzer.total_files,
-            'bug_fixing_commits': len(self.repo_analyzer.bug_fixes),
-            'cache_size': f"{self.cache_size * 100}% ({self.cache_max_size} files)",
-            'hit_rate': f"{self.results['hit_rate']:.2f}%",
+        if self.hit_count + self.miss_count > 0:
+            hit_rate = (self.hit_count / (self.hit_count + self.miss_count)) * 100
+        else:
+            hit_rate = 0
+
+        summary = {
+            'repository_path': self.repo_path,
+            'total_files': total_files,
+            'total_commits': total_commits,
+            'bug_fixes': bug_fixes,
+            'cache_size': self.cache_size,
             'policy': self.policy,
-            'top_file': self.results['top_files'][0]['file_path'] if self.results.get('top_files') else None,
-            'recommendations': len(self.get_recommended_actions()),
-            'timestamp': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            'window_ratio': self.window_ratio,
+            'hit_rate': hit_rate,
+            'created_at': self.created_at
         }
+
+        # Add top files if we have file statistics
+        if hasattr(self, 'get_top_files'):
+            summary['top_files'] = self.get_top_files(20)
+
+        return summary
 
 
 # Factory function for easier instantiation

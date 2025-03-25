@@ -41,7 +41,7 @@ def analyze_command(args):
     """Handle the analyze command."""
     logger = setup_logging(args.verbose, args.quiet)
 
-    logger.info(f"Analyzing repository: {args.repo_path}")
+    logger.info("Analyzing repository: {}".format(args.repo_path))
 
     # Create FixCache instance
     try:
@@ -70,63 +70,81 @@ def analyze_command(args):
         results = fix_cache.get_summary()
 
         # Display results
-        logger.info(f"Hit rate: {hit_rate:.2f}%")
-        logger.info(f"Cache size: {args.cache_size * 100:.1f}% of {results['total_files']} files")
+        logger.info("Hit rate: {:.2f}%".format(hit_rate))
+        logger.info("Cache size: {:.1f}% of {} files".format(args.cache_size * 100, results.get('total_files', 'N/A')))
+
+        # Determine output files
+        viz_output = None
+        report_output = None
+        data_output = None
+
+        if args.visualize and args.output and args.output.endswith(('.png', '.jpg', '.pdf')):
+            viz_output = args.output
+        elif args.visualize:
+            viz_output = "fixcache_results.png"
+
+        if args.report and args.output and not args.output.endswith(('.png', '.jpg', '.pdf')):
+            report_output = args.output
+        elif args.report:
+            report_output = "fixcache_report.md"
+
+        if not args.visualize and not args.report and args.output:
+            data_output = args.output
 
         # Generate visualization if requested
         if args.visualize:
             try:
-                output_file = args.output if args.output else "fixcache_results.png"
-                logger.info(f"Generating visualization to {output_file}")
+                logger.info("Generating visualization to {}".format(viz_output))
                 from .visualization import visualize_results
-                visualize_success = visualize_results(results, output_file)
+                visualize_success = visualize_results(results, viz_output)
                 if not visualize_success:
                     logger.warning("Failed to generate visualization. Check if matplotlib is installed.")
             except Exception as e:
-                logger.error(f"Error generating visualization: {str(e)}")
+                logger.error("Error generating visualization: {}".format(str(e)))
                 logger.warning("Failed to generate visualization. Matplotlib may not be installed.")
 
         # Generate report if requested
         if args.report:
             try:
-                output_file = args.output if args.output else "fixcache_report.md"
                 format_type = args.format if args.format else "md"
-                logger.info(f"Generating report to {output_file}")
+                logger.info("Generating report to {}".format(report_output))
 
                 report_content = generate_report(fix_cache, format_type)
-                with open(output_file, 'w') as f:
+                with open(report_output, 'w') as f:
                     f.write(report_content)
+
+                logger.info("Report successfully generated")
             except Exception as e:
-                logger.error(f"Error generating report: {str(e)}")
+                logger.error("Error generating report: {}".format(str(e)))
 
         # Output results in the requested format
-        if not args.report and not args.visualize and args.output:
+        if data_output:
             format_type = args.format if args.format else "json"
-            logger.info(f"Writing results to {args.output}")
+            logger.info("Writing results to {}".format(data_output))
 
             try:
                 if format_type == "json":
-                    with open(args.output, 'w') as f:
+                    with open(data_output, 'w') as f:
                         json.dump(results, f, indent=2)
                 elif format_type == "yaml":
                     try:
                         import yaml
-                        with open(args.output, 'w') as f:
+                        with open(data_output, 'w') as f:
                             yaml.dump(results, f)
                     except ImportError:
                         logger.error("YAML output requires PyYAML. Install with: pip install pyyaml")
                         return 1
                 else:
-                    with open(args.output, 'w') as f:
+                    with open(data_output, 'w') as f:
                         f.write(str(results))
             except Exception as e:
-                logger.error(f"Error writing results: {str(e)}")
+                logger.error("Error writing results: {}".format(str(e)))
                 return 1
 
         return 0
 
     except Exception as e:
-        logger.error(f"Error during analysis: {str(e)}")
+        logger.error("Error during analysis: {}".format(str(e)))
         if args.verbose:
             import traceback
             traceback.print_exc()
@@ -144,60 +162,99 @@ def generate_report(fix_cache, format_type):
     Returns:
         str: The formatted report content
     """
-    results = fix_cache.get_summary()
+    results = fix_cache.get_summary() if hasattr(fix_cache, 'get_summary') else {}
     top_files = fix_cache.get_top_files(20) if hasattr(fix_cache, 'get_top_files') else []
 
+    # Ensure repository_path exists
+    repo_path = getattr(fix_cache, 'repo_path', 'Unknown Repository')
+    if 'repository_path' not in results or not results['repository_path']:
+        results['repository_path'] = repo_path
+
     if format_type == "md":
-        report = f"# FixCache Analysis Report\n\n"
-        report += f"## Repository Summary\n\n"
-        report += f"- **Repository Path**: {results['repository_path']}\n"
-        report += f"- **Analysis Date**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
-        report += f"- **Total Files**: {results['total_files']}\n"
-        report += f"- **Total Commits**: {results.get('total_commits', 'N/A')}\n"
-        report += f"- **Bug Fixes**: {results.get('bug_fixes', 'N/A')}\n\n"
+        report = "# FixCache Analysis Report\n\n"
+        report += "## Repository Summary\n\n"
+        report += "- **Repository Path**: {}\n".format(results.get('repository_path', 'Unknown Repository'))
+        report += "- **Analysis Date**: {}\n".format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+        report += "- **Total Files**: {}\n".format(results.get('total_files', 'N/A'))
+        report += "- **Total Commits**: {}\n".format(results.get('total_commits', 'N/A'))
+        report += "- **Bug Fixes**: {}\n\n".format(results.get('bug_fixes', 'N/A'))
 
-        report += f"## Analysis Parameters\n\n"
-        report += f"- **Cache Size**: {results.get('cache_size', 'N/A') * 100:.1f}%\n"
-        report += f"- **Policy**: {results.get('policy', 'N/A')}\n"
-        report += f"- **Window Ratio**: {results.get('window_ratio', 'N/A')}\n\n"
+        report += "## Analysis Parameters\n\n"
+        cache_size = results.get('cache_size', 0)
+        if isinstance(cache_size, str):
+            try:
+                cache_size = float(cache_size)
+            except (ValueError, TypeError):
+                cache_size = 0
+        report += "- **Cache Size**: {:.1f}%\n".format(cache_size * 100)
+        report += "- **Policy**: {}\n".format(results.get('policy', 'N/A'))
+        report += "- **Window Ratio**: {}\n\n".format(results.get('window_ratio', 'N/A'))
 
-        report += f"## Results\n\n"
-        report += f"- **Hit Rate**: {results.get('hit_rate', 'N/A'):.2f}%\n\n"
+        report += "## Results\n\n"
+        hit_rate = results.get('hit_rate', 0)
+        if isinstance(hit_rate, str):
+            try:
+                hit_rate = float(hit_rate)
+            except (ValueError, TypeError):
+                hit_rate = 0
+        report += "- **Hit Rate**: {:.2f}%\n\n".format(hit_rate)
 
         if top_files:
-            report += f"## Top Bug-Prone Files\n\n"
-            report += f"| Rank | File | Risk Score |\n"
-            report += f"|------|------|------------|\n"
+            report += "## Top Bug-Prone Files\n\n"
+            report += "| Rank | File | Risk Score |\n"
+            report += "|------|------|------------|\n"
             for i, (file, score) in enumerate(top_files, 1):
-                report += f"| {i} | {file} | {score:.2f} |\n"
+                # Ensure score is a float
+                try:
+                    score_float = float(score)
+                except (ValueError, TypeError):
+                    score_float = 0.0
+                report += "| {} | {} | {:.2f} |\n".format(i, file, score_float)
 
     elif format_type == "txt":
         report = "FixCache Analysis Report\n"
         report += "=======================\n\n"
-        report += f"Repository Path: {results['repository_path']}\n"
-        report += f"Analysis Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
-        report += f"Total Files: {results['total_files']}\n"
-        report += f"Total Commits: {results.get('total_commits', 'N/A')}\n"
-        report += f"Bug Fixes: {results.get('bug_fixes', 'N/A')}\n\n"
+        report += "Repository Path: {}\n".format(results.get('repository_path', 'Unknown Repository'))
+        report += "Analysis Date: {}\n".format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+        report += "Total Files: {}\n".format(results.get('total_files', 'N/A'))
+        report += "Total Commits: {}\n".format(results.get('total_commits', 'N/A'))
+        report += "Bug Fixes: {}\n\n".format(results.get('bug_fixes', 'N/A'))
 
         report += "Analysis Parameters:\n"
-        report += f"  Cache Size: {results.get('cache_size', 'N/A') * 100:.1f}%\n"
-        report += f"  Policy: {results.get('policy', 'N/A')}\n"
-        report += f"  Window Ratio: {results.get('window_ratio', 'N/A')}\n\n"
+        cache_size = results.get('cache_size', 0)
+        if isinstance(cache_size, str):
+            try:
+                cache_size = float(cache_size)
+            except (ValueError, TypeError):
+                cache_size = 0
+        report += "  Cache Size: {:.1f}%\n".format(cache_size * 100)
+        report += "  Policy: {}\n".format(results.get('policy', 'N/A'))
+        report += "  Window Ratio: {}\n\n".format(results.get('window_ratio', 'N/A'))
 
         report += "Results:\n"
-        report += f"  Hit Rate: {results.get('hit_rate', 'N/A'):.2f}%\n\n"
+        hit_rate = results.get('hit_rate', 0)
+        if isinstance(hit_rate, str):
+            try:
+                hit_rate = float(hit_rate)
+            except (ValueError, TypeError):
+                hit_rate = 0
+        report += "  Hit Rate: {:.2f}%\n\n".format(hit_rate)
 
         if top_files:
             report += "Top Bug-Prone Files:\n"
             for i, (file, score) in enumerate(top_files, 1):
-                report += f"{i}. {file} (Risk Score: {score:.2f})\n"
+                # Ensure score is a float
+                try:
+                    score_float = float(score)
+                except (ValueError, TypeError):
+                    score_float = 0.0
+                report += "{}. {} (Risk Score: {:.2f})\n".format(i, file, score_float)
 
     else:
         # Default to JSON string
         import json
         report_data = {
-            "repository": results['repository_path'],
+            "repository": results.get('repository_path', 'Unknown Repository'),
             "analysis_date": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             "parameters": {
                 "cache_size": results.get('cache_size', 'N/A'),
@@ -205,12 +262,13 @@ def generate_report(fix_cache, format_type):
                 "window_ratio": results.get('window_ratio', 'N/A')
             },
             "results": {
-                "total_files": results['total_files'],
+                "total_files": results.get('total_files', 'N/A'),
                 "total_commits": results.get('total_commits', 'N/A'),
                 "bug_fixes": results.get('bug_fixes', 'N/A'),
                 "hit_rate": results.get('hit_rate', 'N/A')
             },
-            "top_files": [{"file": file, "score": score} for file, score in top_files]
+            "top_files": [{"file": file, "score": float(score) if isinstance(score, (int, float)) else 0.0}
+                          for file, score in top_files]
         }
         report = json.dumps(report_data, indent=2)
 
@@ -221,7 +279,7 @@ def optimize_command(args):
     """Handle the optimize command."""
     logger = setup_logging(args.verbose, args.quiet)
 
-    logger.info(f"Optimizing cache size for repository: {args.repo_path}")
+    logger.info("Optimizing cache size for repository: {}".format(args.repo_path))
 
     try:
         # Create cache sizes to test
@@ -231,19 +289,20 @@ def optimize_command(args):
             cache_sizes.append(round(current_size, 4))
             current_size += args.step_size
 
-        logger.info(f"Testing cache sizes: {cache_sizes}")
+        logger.info("Testing cache sizes: {}".format(cache_sizes))
 
         # Initialize results dictionary
         results = {}
 
         # Test each cache size
         for size in cache_sizes:
-            logger.info(f"Testing cache size: {size * 100:.1f}%")
+            logger.info("Testing cache size: {:.1f}%".format(size * 100))
 
             fix_cache = FixCache(
                 repo_path=args.repo_path,
                 cache_size=size,
                 policy=args.policy,
+                lookback_commits=args.lookback if args.lookback else None,  # Use lookback parameter
                 window_ratio=0.25  # Use default window ratio for optimization
             )
 
@@ -255,29 +314,29 @@ def optimize_command(args):
             hit_rate = fix_cache.predict()
             results[size] = hit_rate
 
-            logger.info(f"Cache size {size * 100:.1f}% hit rate: {hit_rate:.2f}%")
+            logger.info("Cache size {:.1f}% hit rate: {:.2f}%".format(size * 100, hit_rate))
 
         # Find best cache size
         best_size = max(results, key=results.get)
         best_hit_rate = results[best_size]
 
-        logger.info(f"Optimal cache size: {best_size * 100:.1f}% with hit rate: {best_hit_rate:.2f}%")
+        logger.info("Optimal cache size: {:.1f}% with hit rate: {:.2f}%".format(best_size * 100, best_hit_rate))
 
         # Generate visualization if output is provided
         if args.output:
             if args.output.endswith('.png'):
-                logger.info(f"Generating visualization to {args.output}")
+                logger.info("Generating visualization to {}".format(args.output))
                 from .visualization import plot_cache_optimization
                 plot_cache_optimization(results, args.output)
             else:
-                logger.info(f"Writing results to {args.output}")
+                logger.info("Writing results to {}".format(args.output))
                 with open(args.output, 'w') as f:
                     json.dump(results, f, indent=2)
 
         return 0
 
     except Exception as e:
-        logger.error(f"Error during optimization: {str(e)}")
+        logger.error("Error during optimization: {}".format(str(e)))
         if args.verbose:
             import traceback
             traceback.print_exc()
@@ -301,7 +360,8 @@ def compare_command(args):
             fix_cache = FixCache(
                 repo_path=repo_path,
                 cache_size=args.cache_size,
-                policy=args.policy
+                policy=args.policy,
+                lookback_commits=args.lookback if args.lookback else None  # Use lookback parameter
             )
 
             analyze_success = fix_cache.analyze_repository()
@@ -468,6 +528,10 @@ def main():
         help='Step size for cache testing (default: 0.05)'
     )
     optimize_parser.add_argument(
+        '--lookback', '-l', type=int,
+        help='Number of commits to look back (default: all)'
+    )
+    optimize_parser.add_argument(
         '--fine-grained', action='store_true',
         help='Use fine-grained steps'
     )
@@ -509,6 +573,10 @@ def main():
     compare_parser.add_argument(
         '--quiet', '-q', action='store_true',
         help='Suppress output'
+    )
+    compare_parser.add_argument(
+        '--lookback', '-l', type=int,
+        help='Number of commits to look back (default: all)'
     )
 
     # Visualize command

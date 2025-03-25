@@ -33,108 +33,84 @@ THEME_COLORS = {
 }
 
 
-def visualize_results(
-        results: Dict[str, Any],
-        output_file: str = "fixcache_results.png",
-        show_plot: bool = False
-) -> bool:
+def visualize_results(results, output_file):
     """
-    Visualize FixCache prediction results with multiple charts.
+    Generate visualization for FixCache results.
 
     Args:
-        results: Results dictionary from FixCache.predict()
-        output_file: Path to save the visualization image
-        show_plot: Whether to display the plot on screen
+        results (dict): The results dictionary from FixCache analysis
+        output_file (str): The path to save the visualization
 
     Returns:
-        True if visualization was successful, False otherwise
+        bool: True if successful, False otherwise
     """
     try:
-        # Extract key metrics
-        hit_rate = results.get('hit_rate', 0)
-        total_files = results.get('total_files', 0)
-        total_bugs = results.get('total_bug_fixes', 0)
-        top_files = results.get('top_files', [])
-        cache_size = results.get('cache_size', 0)
-        policy = results.get('policy', 'UNKNOWN')
-        repo_path = results.get('repo_path', 'Unknown Repository')
-        timestamp = results.get('timestamp', datetime.datetime.now().isoformat())
+        import matplotlib
+        matplotlib.use('Agg')  # Use non-interactive backend
+        import matplotlib.pyplot as plt
+        import numpy as np
 
-        # Parse timestamp
-        try:
-            if isinstance(timestamp, str):
-                parsed_time = datetime.datetime.fromisoformat(timestamp)
-            else:
-                parsed_time = datetime.datetime.now()
-        except:
-            parsed_time = datetime.datetime.now()
+        # Create figure and subplots
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
 
-        # Create figure with subplots
-        plt.style.use('seaborn-v0_8-whitegrid')
-        fig = plt.figure(figsize=(16, 10), dpi=100)
+        # Plot 1: Cache Hit Rate and Miss Rate
+        # Ensure hit_rate is a number
+        hit_rate = float(results.get('hit_rate', 0))
+        miss_rate = 100 - hit_rate  # This was causing the error
 
-        # Set up grid for subplots
-        grid = plt.GridSpec(3, 4, hspace=0.4, wspace=0.3)
+        labels = ['Hit Rate', 'Miss Rate']
+        sizes = [hit_rate, miss_rate]
+        colors = ['#4CAF50', '#F44336']
+        explode = (0.1, 0)  # Explode hit rate slice
 
-        # Create title and repository information
-        repo_name = os.path.basename(repo_path)
-        fig.suptitle(f'FixCache Bug Prediction Results: {repo_name}',
-                     fontsize=16, fontweight='bold', y=0.98)
+        ax1.pie(sizes, explode=explode, labels=labels, colors=colors, autopct='%1.1f%%',
+                shadow=True, startangle=90)
+        ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle
+        ax1.set_title('Bug Prediction Accuracy')
 
-        # Add subtitle with metadata
-        plt.figtext(
-            0.5, 0.94,
-            f'Generated on {parsed_time.strftime("%Y-%m-%d %H:%M:%S")} | '
-            f'Cache Size: {cache_size * 100:.1f}% | Policy: {policy} | '
-            f'Total Files: {total_files} | Bug Fixes: {total_bugs}',
-            ha='center', fontsize=10, fontstyle='italic'
-        )
+        # Plot 2: Top Bug-Prone Files (if available)
+        if 'top_files' in results and results['top_files']:
+            top_files = results['top_files'][:10]  # Top 10 files
+            files = [os.path.basename(f) for f, _ in top_files]
+            scores = [float(score) for _, score in top_files]  # Ensure scores are float
 
-        # 1. Hit Rate Gauge (top left)
-        ax1 = fig.add_subplot(grid[0, 0:2])
-        _create_hit_rate_gauge(ax1, hit_rate)
+            y_pos = np.arange(len(files))
 
-        # 2. Top Bug-Prone Files (top right, spans 2 columns)
-        ax2 = fig.add_subplot(grid[0, 2:])
-        _plot_top_files(ax2, top_files)
+            ax2.barh(y_pos, scores, align='center', alpha=0.7, color='#2196F3')
+            ax2.set_yticks(y_pos)
+            ax2.set_yticklabels(files)
+            ax2.invert_yaxis()  # Labels read top-to-bottom
+            ax2.set_xlabel('Risk Score')
+            ax2.set_title('Top Bug-Prone Files')
 
-        # 3. Bug Fix Distribution by File Type (middle left)
-        ax3 = fig.add_subplot(grid[1, 0:2])
-        _plot_bug_distribution_by_type(ax3, top_files)
+            # Add text labels
+            for i, score in enumerate(scores):
+                ax2.text(score + 0.1, i, "{:.2f}".format(score), va='center')
+        else:
+            ax2.text(0.5, 0.5, 'No top files data available',
+                     horizontalalignment='center', verticalalignment='center',
+                     transform=ax2.transAxes)
+            ax2.set_title('Top Bug-Prone Files')
 
-        # 4. Bug Fix Timeline (middle right, spans 2 columns)
-        ax4 = fig.add_subplot(grid[1, 2:])
-        _plot_bug_timeline(ax4, results)
+        # Add overall title
+        repo_name = os.path.basename(str(results.get('repository_path', 'Unknown Repository')))
+        plt.suptitle("FixCache Analysis: {}".format(repo_name), fontsize=16)
 
-        # 5. File Complexity vs. Bug Count (bottom left & middle, spans 3 columns)
-        ax5 = fig.add_subplot(grid[2, 0:3])
-        _plot_file_complexity(ax5, top_files)
-
-        # 6. Hit/Miss Distribution (bottom right)
-        ax6 = fig.add_subplot(grid[2, 3])
-        _plot_hit_miss_pie(ax6, results)
-
-        # Add footer with tool information
-        plt.figtext(
-            0.5, 0.01,
-            f'Generated by FixCachePrototype | https://github.com/anirudhsengar/FixCachePrototype',
-            ha='center', fontsize=8, color='gray'
-        )
+        # Adjust layout
+        plt.tight_layout(rect=[0, 0, 1, 0.95])
 
         # Save the figure
-        plt.savefig(output_file, bbox_inches='tight', dpi=150)
-        logger.info(f"Visualization saved to {output_file}")
+        plt.savefig(output_file, dpi=150)
+        plt.close()
 
-        # Show plot if requested
-        if show_plot:
-            plt.show()
-        else:
-            plt.close(fig)
-
+        logger.info("Visualization successfully saved to {}".format(output_file))
         return True
 
+    except ImportError:
+        logger.error("Matplotlib is required for visualization. Install with: pip install matplotlib")
+        return False
     except Exception as e:
-        logger.error(f"Error generating visualization: {str(e)}")
+        logger.error("Error generating visualization: {}".format(str(e)))
         return False
 
 
@@ -559,245 +535,155 @@ def _plot_hit_miss_pie(ax: plt.Axes, results: Dict[str, Any]) -> None:
     ax.set_aspect('equal')
 
 
-def plot_cache_optimization(
-        results: Dict[float, float],
-        output_file: str = "cache_optimization.png",
-        show_plot: bool = False
-) -> bool:
+def plot_cache_optimization(results, output_file):
     """
-    Plot cache size optimization results.
+    Generate visualization for cache size optimization.
 
     Args:
-        results: Dictionary mapping cache sizes to hit rates
-        output_file: Path to save the visualization image
-        show_plot: Whether to display the plot on screen
+        results (dict): Dictionary mapping cache sizes to hit rates
+        output_file (str): The path to save the visualization
 
     Returns:
-        True if visualization was successful, False otherwise
+        bool: True if successful, False otherwise
     """
     try:
-        # Check for data
-        if not results:
-            logger.error("No cache optimization results to visualize")
-            return False
+        import matplotlib
+        matplotlib.use('Agg')  # Use non-interactive backend
+        import matplotlib.pyplot as plt
 
-        # Extract cache sizes and hit rates
-        cache_sizes = [size * 100 for size in results.keys()]  # Convert to percentages
-        hit_rates = list(results.values())
+        # Convert string keys to float if needed
+        cache_sizes = []
+        hit_rates = []
+
+        for size, rate in sorted(results.items()):
+            # Convert to float if it's a string
+            if isinstance(size, str):
+                size = float(size)
+            cache_sizes.append(size * 100)  # Convert to percentage
+            hit_rates.append(rate)
+
+        # Find best cache size
+        best_idx = hit_rates.index(max(hit_rates))
+        best_size = cache_sizes[best_idx]
+        best_rate = hit_rates[best_idx]
 
         # Create figure
-        plt.style.use('seaborn-v0_8-whitegrid')
-        fig, ax = plt.subplots(figsize=(10, 6), dpi=100)
+        plt.figure(figsize=(10, 6))
 
-        # Plot line
-        ax.plot(cache_sizes, hit_rates, 'o-', linewidth=2, markersize=8,
-                color=THEME_COLORS['primary'])
+        # Plot cache size vs hit rate
+        plt.plot(cache_sizes, hit_rates, 'o-', linewidth=2, color='#2196F3')
 
-        # Add area under the curve
-        ax.fill_between(cache_sizes, hit_rates, alpha=0.3, color=THEME_COLORS['primary'])
+        # Highlight the optimal point
+        plt.plot(best_size, best_rate, 'ro', markersize=10)
+        plt.annotate('Optimal: {:.1f}%'.format(best_size),
+                     xy=(best_size, best_rate),
+                     xytext=(best_size + 2, best_rate - 5),
+                     arrowprops=dict(facecolor='black', shrink=0.05, width=1.5),
+                     )
 
-        # Find optimal cache size
-        optimal_idx = hit_rates.index(max(hit_rates))
-        optimal_size = cache_sizes[optimal_idx]
-        optimal_hit_rate = hit_rates[optimal_idx]
+        # Set labels and title
+        plt.xlabel('Cache Size (% of total files)')
+        plt.ylabel('Hit Rate (%)')
+        plt.title('Cache Size Optimization')
 
-        # Highlight optimal point
-        ax.plot(optimal_size, optimal_hit_rate, 'o', markersize=12,
-                markerfacecolor='red', markeredgecolor='w', markeredgewidth=2)
-
-        # Add annotation for optimal point
-        ax.annotate(
-            f"Optimal: {optimal_size:.1f}% ({optimal_hit_rate:.2f}% hit rate)",
-            (optimal_size, optimal_hit_rate),
-            xytext=(10, 20),
-            textcoords='offset points',
-            fontsize=10,
-            fontweight='bold',
-            arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=.2', color='black')
-        )
-
-        # Set up axes
-        ax.set_xlabel('Cache Size (% of total files)', fontsize=12)
-        ax.set_ylabel('Hit Rate (%)', fontsize=12)
-        ax.set_title('Cache Size Optimization Results', fontsize=16, fontweight='bold')
-
-        # Set axis limits
-        ax.set_xlim(min(cache_sizes) * 0.9, max(cache_sizes) * 1.1)
-        ax.set_ylim(0, max(hit_rates) * 1.2)
-
-        # Add grid
-        ax.grid(True, linestyle='--', alpha=0.7)
-
-        # Add footer with tool information
-        plt.figtext(
-            0.5, 0.01,
-            f'Generated by FixCachePrototype | https://github.com/anirudhsengar/FixCachePrototype',
-            ha='center', fontsize=8, color='gray'
-        )
-
-        # Add timestamp
-        current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        plt.figtext(
-            0.98, 0.02,
-            f'Generated: {current_time}',
-            ha='right', fontsize=8, color='gray'
-        )
+        # Set grid
+        plt.grid(True, linestyle='--', alpha=0.7)
 
         # Save the figure
         plt.tight_layout()
-        plt.savefig(output_file, bbox_inches='tight', dpi=150)
-        logger.info(f"Optimization visualization saved to {output_file}")
+        plt.savefig(output_file, dpi=150)
+        plt.close()
 
-        # Show plot if requested
-        if show_plot:
-            plt.show()
-        else:
-            plt.close(fig)
-
+        logger.info("Optimization visualization successfully saved to {}".format(output_file))
         return True
 
+    except ImportError:
+        logger.error("Matplotlib is required for visualization. Install with: pip install matplotlib")
+        return False
     except Exception as e:
-        logger.error(f"Error generating optimization visualization: {str(e)}")
+        logger.error("Error generating visualization: {}".format(str(e)))
         return False
 
 
-def plot_repository_comparison(
-        results: Dict[str, Dict[str, Any]],
-        output_file: str = "repo_comparison.png",
-        show_plot: bool = False
-) -> bool:
+def plot_repository_comparison(results, output_file):
     """
-    Plot comparison of multiple repositories.
+    Generate visualization comparing multiple repositories.
 
     Args:
-        results: Dictionary mapping repository paths to their results
-        output_file: Path to save the visualization image
-        show_plot: Whether to display the plot on screen
+        results (dict): Dictionary mapping repository names to their results
+        output_file (str): The path to save the visualization
 
     Returns:
-        True if visualization was successful, False otherwise
+        bool: True if successful, False otherwise
     """
     try:
-        # Check for data
-        if not results or len(results) < 2:
-            logger.error("Not enough repositories to compare (need at least 2)")
-            return False
+        import matplotlib
+        matplotlib.use('Agg')  # Use non-interactive backend
+        import matplotlib.pyplot as plt
+        import numpy as np
 
-        # Extract repository names and hit rates
-        repo_names = [os.path.basename(repo_path) for repo_path in results.keys()]
-        hit_rates = [repo_results.get('hit_rate', 0) for repo_results in results.values()]
-        bug_counts = [repo_results.get('total_bug_fixes', 0) for repo_results in results.values()]
-        file_counts = [repo_results.get('total_files', 0) for repo_results in results.values()]
+        # Extract data
+        repo_names = list(results.keys())
+        hit_rates = []
+        bug_fix_ratios = []
 
-        # Calculate bug density (bugs per file)
-        bug_densities = [
-            count / max(1, files) * 100 for count, files in zip(bug_counts, file_counts)
-        ]
+        for repo, data in results.items():
+            hit_rates.append(data.get('hit_rate', 0))
+            total_commits = data.get('total_commits', 0)
+            bug_fixes = data.get('bug_fixes', 0)
+            bug_fix_ratio = (bug_fixes / total_commits * 100) if total_commits > 0 else 0
+            bug_fix_ratios.append(bug_fix_ratio)
 
-        # Create figure with subplots
-        plt.style.use('seaborn-v0_8-whitegrid')
-        fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18, 6), dpi=100)
+        # Create figure with two subplots
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
 
-        # 1. Hit Rate Comparison (Bar Chart)
-        bars = ax1.bar(repo_names, hit_rates, color=THEME_COLORS['primary'], alpha=0.8)
+        # Bar width
+        width = 0.35
 
-        # Add data labels
-        for bar in bars:
-            height = bar.get_height()
-            ax1.annotate(
-                f'{height:.2f}%',
-                xy=(bar.get_x() + bar.get_width() / 2, height),
-                xytext=(0, 3),  # 3 points vertical offset
-                textcoords="offset points",
-                ha='center', va='bottom',
-                fontsize=9, fontweight='bold'
-            )
+        # Plot 1: Hit Rates
+        x = np.arange(len(repo_names))
+        ax1.bar(x, hit_rates, width, color='#4CAF50', label='Hit Rate')
 
-        # Set up first chart
-        ax1.set_xlabel('Repository', fontsize=10)
-        ax1.set_ylabel('Hit Rate (%)', fontsize=10)
-        ax1.set_title('Hit Rate Comparison', fontsize=14)
-        ax1.grid(axis='y', linestyle='--', alpha=0.7)
-        ax1.set_ylim(0, max(hit_rates) * 1.2)
-        plt.setp(ax1.get_xticklabels(), rotation=45, ha='right')
+        # Set labels and title
+        ax1.set_xlabel('Repository')
+        ax1.set_ylabel('Hit Rate (%)')
+        ax1.set_title('Prediction Hit Rate by Repository')
+        ax1.set_xticks(x)
+        ax1.set_xticklabels(repo_names, rotation=45, ha='right')
+        ax1.grid(True, linestyle='--', alpha=0.7, axis='y')
 
-        # 2. Bug Count Comparison (Bar Chart)
-        bars = ax2.bar(repo_names, bug_counts, color=THEME_COLORS['secondary'], alpha=0.8)
+        # Add text labels
+        for i, v in enumerate(hit_rates):
+            ax1.text(i, v + 1, "{:.1f}%".format(v), ha='center')
 
-        # Add data labels
-        for bar in bars:
-            height = bar.get_height()
-            ax2.annotate(
-                f'{int(height)}',
-                xy=(bar.get_x() + bar.get_width() / 2, height),
-                xytext=(0, 3),
-                textcoords="offset points",
-                ha='center', va='bottom',
-                fontsize=9, fontweight='bold'
-            )
+        # Plot 2: Bug Fix Ratios
+        ax2.bar(x, bug_fix_ratios, width, color='#F44336', label='Bug Fix Ratio')
 
-        # Set up second chart
-        ax2.set_xlabel('Repository', fontsize=10)
-        ax2.set_ylabel('Bug Fix Count', fontsize=10)
-        ax2.set_title('Bug Fix Comparison', fontsize=14)
-        ax2.grid(axis='y', linestyle='--', alpha=0.7)
-        ax2.set_ylim(0, max(bug_counts) * 1.2)
-        plt.setp(ax2.get_xticklabels(), rotation=45, ha='right')
+        # Set labels and title
+        ax2.set_xlabel('Repository')
+        ax2.set_ylabel('Bug Fixes (% of total commits)')
+        ax2.set_title('Bug Fix Ratio by Repository')
+        ax2.set_xticks(x)
+        ax2.set_xticklabels(repo_names, rotation=45, ha='right')
+        ax2.grid(True, linestyle='--', alpha=0.7, axis='y')
 
-        # 3. Bug Density Comparison (Bar Chart)
-        bars = ax3.bar(repo_names, bug_densities, color=THEME_COLORS['tertiary'], alpha=0.8)
+        # Add text labels
+        for i, v in enumerate(bug_fix_ratios):
+            ax2.text(i, v + 1, "{:.1f}%".format(v), ha='center')
 
-        # Add data labels
-        for bar in bars:
-            height = bar.get_height()
-            ax3.annotate(
-                f'{height:.2f}%',
-                xy=(bar.get_x() + bar.get_width() / 2, height),
-                xytext=(0, 3),
-                textcoords="offset points",
-                ha='center', va='bottom',
-                fontsize=9, fontweight='bold'
-            )
-
-        # Set up third chart
-        ax3.set_xlabel('Repository', fontsize=10)
-        ax3.set_ylabel('Bug Density (% of files with bugs)', fontsize=10)
-        ax3.set_title('Bug Density Comparison', fontsize=14)
-        ax3.grid(axis='y', linestyle='--', alpha=0.7)
-        ax3.set_ylim(0, max(bug_densities) * 1.2)
-        plt.setp(ax3.get_xticklabels(), rotation=45, ha='right')
-
-        # Add main title
-        fig.suptitle('Repository Comparison', fontsize=16, fontweight='bold', y=0.98)
-
-        # Add footer with tool information
-        plt.figtext(
-            0.5, 0.01,
-            f'Generated by FixCachePrototype | https://github.com/anirudhsengar/FixCachePrototype',
-            ha='center', fontsize=8, color='gray'
-        )
-
-        # Add timestamp
-        current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        plt.figtext(
-            0.98, 0.02,
-            f'Generated: {current_time}',
-            ha='right', fontsize=8, color='gray'
-        )
+        # Adjust layout
+        plt.tight_layout()
 
         # Save the figure
-        plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-        plt.savefig(output_file, bbox_inches='tight', dpi=150)
-        logger.info(f"Repository comparison visualization saved to {output_file}")
+        plt.savefig(output_file, dpi=150)
+        plt.close()
 
-        # Show plot if requested
-        if show_plot:
-            plt.show()
-        else:
-            plt.close(fig)
-
+        logger.info("Repository comparison visualization successfully saved to {}".format(output_file))
         return True
 
+    except ImportError:
+        logger.error("Matplotlib is required for visualization. Install with: pip install matplotlib")
+        return False
     except Exception as e:
-        logger.error(f"Error generating repository comparison visualization: {str(e)}")
+        logger.error("Error generating visualization: {}".format(str(e)))
         return False
