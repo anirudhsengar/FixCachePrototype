@@ -1,0 +1,38 @@
+{
+  "buildship": {
+    "repository_path": "C:\\Users\\aniru\\buildship",
+    "total_files": 0,
+    "total_commits": 0,
+    "bug_fixes": 731,
+    "cache_size": 0.2,
+    "policy": "BUG",
+    "window_ratio": 0.25,
+    "hit_rate": 40.97378277153558,
+    "created_at": "2025-03-25T21:24:28.309530",
+    "top_files": []
+  },
+  "openj9": {
+    "repository_path": "C:\\Users\\aniru\\OneDrive\\Desktop\\openj9",
+    "total_files": 0,
+    "total_commits": 0,
+    "bug_fixes": 1255,
+    "cache_size": 0.2,
+    "policy": "BUG",
+    "window_ratio": 0.25,
+    "hit_rate": 50.108459869848154,
+    "created_at": "2025-03-25T21:25:12.000420",
+    "top_files": []
+  },
+  "openjdk": {
+    "repository_path": "C:\\Users\\aniru\\OneDrive\\Desktop\\openjdk",
+    "total_files": 0,
+    "total_commits": 0,
+    "bug_fixes": 817,
+    "cache_size": 0.2,
+    "policy": "BUG",
+    "window_ratio": 0.25,
+    "hit_rate": 16.53589642997254,
+    "created_at": "2025-03-25T21:26:10.171467",
+    "top_files": []
+  }
+}
