@@ -19,8 +19,8 @@ from typing import List, Dict, Set, Tuple, Any, Optional, Union, Callable
 from collections import defaultdict, Counter
 
 # Internal imports
-from repository import RepositoryAnalyzer
-from utils import is_code_file, safe_divide
+from .repository import RepositoryAnalyzer
+from .utils import is_code_file, safe_divide
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -370,40 +370,40 @@ class FixCache:
             'cache_seeding': self.cache_seeding,
         }
 
-    def get_top_files(self, n: int = 10) -> List[Dict[str, Any]]:
+    def get_top_files(self, num_files=10):
         """
-        Get the top N files most likely to contain bugs.
+        Get the top bug-prone files based on the analysis.
 
         Args:
-            n: Number of files to return
+            num_files (int): Number of files to return
 
         Returns:
-            List of dictionaries with file info
+            list: List of tuples (file_path, risk_score) sorted by risk score
         """
-        # Sort files by bug fix count
-        top_files = []
+        if not hasattr(self, 'file_stats') or not self.file_stats:
+            return []
 
-        for file_path in self.cache:
-            if file_path in self.repo_analyzer.file_stats:
-                stats = self.repo_analyzer.file_stats[file_path]
-                hit_rate = safe_divide(
-                    self.file_hit_count[file_path],
-                    self.file_access_count[file_path]
-                ) * 100 if file_path in self.file_access_count else 0
+        # Calculate risk scores for all files
+        file_risks = []
+        for file_path, stats in self.file_stats.items():
+            # Simple risk formula: bug_fixes / (days_since_last_fix + 1)
+            bug_fixes = stats.get('bug_fixes', 0)
+            commit_count = stats.get('commit_count', 0)
 
-                top_files.append({
-                    'file_path': file_path,
-                    'bug_fixes': stats['bug_fixes'],
-                    'hit_rate': hit_rate,
-                    'file_type': os.path.splitext(file_path)[1],
-                    'last_modified': stats.get('last_bug_fix', 0)
-                })
+            if commit_count == 0:
+                continue
 
-        # Sort by bug fix count (descending)
-        top_files.sort(key=lambda x: x['bug_fixes'], reverse=True)
+            # Risk score formula
+            # Prioritizes files with more bug fixes and more recent activity
+            risk_score = bug_fixes * (bug_fixes / commit_count)
 
-        # Return top N files or all if less than N
-        return top_files[:min(n, len(top_files))]
+            file_risks.append((file_path, risk_score))
+
+        # Sort by risk score in descending order
+        file_risks.sort(key=lambda x: x[1], reverse=True)
+
+        # Return top N files
+        return file_risks[:num_files]
 
     def get_bottom_files(self, n: int = 10) -> List[Dict[str, Any]]:
         """

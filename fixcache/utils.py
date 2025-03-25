@@ -20,7 +20,7 @@ import multiprocessing
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 # Import visualizations (avoid circular imports by importing inside functions)
-# from fixcache.visualization import plot_cache_optimization, plot_repository_comparison
+# from .visualization import plot_cache_optimization, plot_repository_comparison
 
 # Setup logging
 logger = logging.getLogger(__name__)

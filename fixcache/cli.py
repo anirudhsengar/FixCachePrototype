@@ -34,12 +34,12 @@ def setup_logging(verbose=False, quiet=False):
         level=log_level,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
+    return logging.getLogger('fixcache')
 
 
 def analyze_command(args):
     """Handle the analyze command."""
-    setup_logging(args.verbose, args.quiet)
-    logger = logging.getLogger('fixcache.analyze')
+    logger = setup_logging(args.verbose, args.quiet)
 
     logger.info(f"Analyzing repository: {args.repo_path}")
 
@@ -75,49 +75,151 @@ def analyze_command(args):
 
         # Generate visualization if requested
         if args.visualize:
-            output_file = args.output if args.output else "fixcache_results.png"
-            logger.info(f"Generating visualization to {output_file}")
-            visualize_success = visualize_results(results, output_file)
-            if not visualize_success:
+            try:
+                output_file = args.output if args.output else "fixcache_results.png"
+                logger.info(f"Generating visualization to {output_file}")
+                from .visualization import visualize_results
+                visualize_success = visualize_results(results, output_file)
+                if not visualize_success:
+                    logger.warning("Failed to generate visualization. Check if matplotlib is installed.")
+            except Exception as e:
+                logger.error(f"Error generating visualization: {str(e)}")
                 logger.warning("Failed to generate visualization. Matplotlib may not be installed.")
 
         # Generate report if requested
         if args.report:
-            output_file = args.output if args.output else "fixcache_report.md"
-            format_type = args.format if args.format else "md"
-            logger.info(f"Generating report to {output_file}")
+            try:
+                output_file = args.output if args.output else "fixcache_report.md"
+                format_type = args.format if args.format else "md"
+                logger.info(f"Generating report to {output_file}")
 
-            report_content = fix_cache.generate_report(format_type)
-            with open(output_file, 'w') as f:
-                f.write(report_content)
+                report_content = generate_report(fix_cache, format_type)
+                with open(output_file, 'w') as f:
+                    f.write(report_content)
+            except Exception as e:
+                logger.error(f"Error generating report: {str(e)}")
 
         # Output results in the requested format
         if not args.report and not args.visualize and args.output:
             format_type = args.format if args.format else "json"
             logger.info(f"Writing results to {args.output}")
 
-            if format_type == "json":
-                with open(args.output, 'w') as f:
-                    json.dump(results, f, indent=2)
-            elif format_type == "yaml":
-                import yaml
-                with open(args.output, 'w') as f:
-                    yaml.dump(results, f)
-            else:
-                with open(args.output, 'w') as f:
-                    f.write(str(results))
+            try:
+                if format_type == "json":
+                    with open(args.output, 'w') as f:
+                        json.dump(results, f, indent=2)
+                elif format_type == "yaml":
+                    try:
+                        import yaml
+                        with open(args.output, 'w') as f:
+                            yaml.dump(results, f)
+                    except ImportError:
+                        logger.error("YAML output requires PyYAML. Install with: pip install pyyaml")
+                        return 1
+                else:
+                    with open(args.output, 'w') as f:
+                        f.write(str(results))
+            except Exception as e:
+                logger.error(f"Error writing results: {str(e)}")
+                return 1
 
         return 0
 
     except Exception as e:
-        logger.error(f"Error during analysis: {str(e)}", exc_info=args.verbose)
+        logger.error(f"Error during analysis: {str(e)}")
+        if args.verbose:
+            import traceback
+            traceback.print_exc()
         return 1
+
+
+def generate_report(fix_cache, format_type):
+    """
+    Generate a report based on FixCache analysis results.
+
+    Args:
+        fix_cache: The FixCache instance with analysis results
+        format_type: The format for the report (md, txt, etc.)
+
+    Returns:
+        str: The formatted report content
+    """
+    results = fix_cache.get_summary()
+    top_files = fix_cache.get_top_files(20) if hasattr(fix_cache, 'get_top_files') else []
+
+    if format_type == "md":
+        report = f"# FixCache Analysis Report\n\n"
+        report += f"## Repository Summary\n\n"
+        report += f"- **Repository Path**: {results['repository_path']}\n"
+        report += f"- **Analysis Date**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+        report += f"- **Total Files**: {results['total_files']}\n"
+        report += f"- **Total Commits**: {results.get('total_commits', 'N/A')}\n"
+        report += f"- **Bug Fixes**: {results.get('bug_fixes', 'N/A')}\n\n"
+
+        report += f"## Analysis Parameters\n\n"
+        report += f"- **Cache Size**: {results.get('cache_size', 'N/A') * 100:.1f}%\n"
+        report += f"- **Policy**: {results.get('policy', 'N/A')}\n"
+        report += f"- **Window Ratio**: {results.get('window_ratio', 'N/A')}\n\n"
+
+        report += f"## Results\n\n"
+        report += f"- **Hit Rate**: {results.get('hit_rate', 'N/A'):.2f}%\n\n"
+
+        if top_files:
+            report += f"## Top Bug-Prone Files\n\n"
+            report += f"| Rank | File | Risk Score |\n"
+            report += f"|------|------|------------|\n"
+            for i, (file, score) in enumerate(top_files, 1):
+                report += f"| {i} | {file} | {score:.2f} |\n"
+
+    elif format_type == "txt":
+        report = "FixCache Analysis Report\n"
+        report += "=======================\n\n"
+        report += f"Repository Path: {results['repository_path']}\n"
+        report += f"Analysis Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+        report += f"Total Files: {results['total_files']}\n"
+        report += f"Total Commits: {results.get('total_commits', 'N/A')}\n"
+        report += f"Bug Fixes: {results.get('bug_fixes', 'N/A')}\n\n"
+
+        report += "Analysis Parameters:\n"
+        report += f"  Cache Size: {results.get('cache_size', 'N/A') * 100:.1f}%\n"
+        report += f"  Policy: {results.get('policy', 'N/A')}\n"
+        report += f"  Window Ratio: {results.get('window_ratio', 'N/A')}\n\n"
+
+        report += "Results:\n"
+        report += f"  Hit Rate: {results.get('hit_rate', 'N/A'):.2f}%\n\n"
+
+        if top_files:
+            report += "Top Bug-Prone Files:\n"
+            for i, (file, score) in enumerate(top_files, 1):
+                report += f"{i}. {file} (Risk Score: {score:.2f})\n"
+
+    else:
+        # Default to JSON string
+        import json
+        report_data = {
+            "repository": results['repository_path'],
+            "analysis_date": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            "parameters": {
+                "cache_size": results.get('cache_size', 'N/A'),
+                "policy": results.get('policy', 'N/A'),
+                "window_ratio": results.get('window_ratio', 'N/A')
+            },
+            "results": {
+                "total_files": results['total_files'],
+                "total_commits": results.get('total_commits', 'N/A'),
+                "bug_fixes": results.get('bug_fixes', 'N/A'),
+                "hit_rate": results.get('hit_rate', 'N/A')
+            },
+            "top_files": [{"file": file, "score": score} for file, score in top_files]
+        }
+        report = json.dumps(report_data, indent=2)
+
+    return report
 
 
 def optimize_command(args):
     """Handle the optimize command."""
-    setup_logging(args.verbose, args.quiet)
-    logger = logging.getLogger('fixcache.optimize')
+    logger = setup_logging(args.verbose, args.quiet)
 
     logger.info(f"Optimizing cache size for repository: {args.repo_path}")
 
@@ -165,6 +267,7 @@ def optimize_command(args):
         if args.output:
             if args.output.endswith('.png'):
                 logger.info(f"Generating visualization to {args.output}")
+                from .visualization import plot_cache_optimization
                 plot_cache_optimization(results, args.output)
             else:
                 logger.info(f"Writing results to {args.output}")
@@ -174,14 +277,16 @@ def optimize_command(args):
         return 0
 
     except Exception as e:
-        logger.error(f"Error during optimization: {str(e)}", exc_info=args.verbose)
+        logger.error(f"Error during optimization: {str(e)}")
+        if args.verbose:
+            import traceback
+            traceback.print_exc()
         return 1
 
 
 def compare_command(args):
     """Handle the compare command."""
-    setup_logging(args.verbose, args.quiet)
-    logger = logging.getLogger('fixcache.compare')
+    logger = setup_logging(args.verbose, args.quiet)
 
     repos = args.repos.split(',')
     logger.info(f"Comparing {len(repos)} repositories")
@@ -216,6 +321,7 @@ def compare_command(args):
         if args.output:
             if args.output.endswith('.png'):
                 logger.info(f"Generating comparison visualization to {args.output}")
+                from .visualization import plot_repository_comparison
                 plot_repository_comparison(results, args.output)
             else:
                 logger.info(f"Writing comparison results to {args.output}")
@@ -225,14 +331,16 @@ def compare_command(args):
         return 0
 
     except Exception as e:
-        logger.error(f"Error during comparison: {str(e)}", exc_info=args.verbose)
+        logger.error(f"Error during comparison: {str(e)}")
+        if args.verbose:
+            import traceback
+            traceback.print_exc()
         return 1
 
 
 def visualize_command(args):
     """Handle the visualize command."""
-    setup_logging(args.verbose, args.quiet)
-    logger = logging.getLogger('fixcache.visualize')
+    logger = setup_logging(args.verbose, args.quiet)
 
     try:
         # Load input file
@@ -244,24 +352,34 @@ def visualize_command(args):
         output_file = args.output if args.output else "fixcache_visualization.png"
         logger.info(f"Generating visualization to {output_file}")
 
-        if args.type == "summary":
-            visualize_success = visualize_results(results, output_file)
-        elif args.type == "optimization" and isinstance(results, dict):
-            visualize_success = plot_cache_optimization(results, output_file)
-        elif args.type == "comparison":
-            visualize_success = plot_repository_comparison(results, output_file)
-        else:
-            logger.error(f"Unsupported visualization type: {args.type}")
+        try:
+            if args.type == "summary":
+                from .visualization import visualize_results
+                visualize_success = visualize_results(results, output_file)
+            elif args.type == "optimization" and isinstance(results, dict):
+                from .visualization import plot_cache_optimization
+                visualize_success = plot_cache_optimization(results, output_file)
+            elif args.type == "comparison":
+                from .visualization import plot_repository_comparison
+                visualize_success = plot_repository_comparison(results, output_file)
+            else:
+                logger.error(f"Unsupported visualization type: {args.type}")
+                return 1
+        except Exception as e:
+            logger.error(f"Error during visualization: {str(e)}")
             return 1
 
         if not visualize_success:
-            logger.warning("Failed to generate visualization. Matplotlib may not be installed.")
+            logger.warning("Failed to generate visualization. Check if matplotlib is installed.")
             return 1
 
         return 0
 
     except Exception as e:
-        logger.error(f"Error during visualization: {str(e)}", exc_info=args.verbose)
+        logger.error(f"Error during visualization: {str(e)}")
+        if args.verbose:
+            import traceback
+            traceback.print_exc()
         return 1
 
 
@@ -321,6 +439,14 @@ def main():
         '--format', '-f', choices=['json', 'yaml', 'md', 'txt'], default='json',
         help='Output format (default: json)'
     )
+    analyze_parser.add_argument(
+        '--verbose', '-v', action='store_true',
+        help='Increase output verbosity'
+    )
+    analyze_parser.add_argument(
+        '--quiet', '-q', action='store_true',
+        help='Suppress output'
+    )
 
     # Optimize command
     optimize_parser = subparsers.add_parser('optimize', help='Optimize cache size')
@@ -349,6 +475,14 @@ def main():
         '--output', '-o',
         help='Output file path'
     )
+    optimize_parser.add_argument(
+        '--verbose', '-v', action='store_true',
+        help='Increase output verbosity'
+    )
+    optimize_parser.add_argument(
+        '--quiet', '-q', action='store_true',
+        help='Suppress output'
+    )
 
     # Compare command
     compare_parser = subparsers.add_parser('compare', help='Compare repositories')
@@ -368,6 +502,14 @@ def main():
         '--output', '-o',
         help='Output file path'
     )
+    compare_parser.add_argument(
+        '--verbose', '-v', action='store_true',
+        help='Increase output verbosity'
+    )
+    compare_parser.add_argument(
+        '--quiet', '-q', action='store_true',
+        help='Suppress output'
+    )
 
     # Visualize command
     visualize_parser = subparsers.add_parser('visualize', help='Generate visualizations')
@@ -382,6 +524,14 @@ def main():
     visualize_parser.add_argument(
         '--output', '-o',
         help='Output file path'
+    )
+    visualize_parser.add_argument(
+        '--verbose', '-v', action='store_true',
+        help='Increase output verbosity'
+    )
+    visualize_parser.add_argument(
+        '--quiet', '-q', action='store_true',
+        help='Suppress output'
     )
 
     args = parser.parse_args()

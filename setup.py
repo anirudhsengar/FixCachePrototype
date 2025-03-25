@@ -7,20 +7,16 @@ Setup script for FixCachePrototype package.
 
 from setuptools import setup, find_packages
 
-with open("README.md", "r", encoding="utf-8") as fh:
-    long_description = fh.read()
-
 setup(
     name="fixcache",
     version="0.1.0",
     author="anirudhsengar",
     author_email="anirudhsengar@gmail.com",
     description="A tool for bug prediction using the FixCache algorithm",
-    long_description=long_description,
+    long_description=open("README.md", "r", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
     url="https://github.com/anirudhsengar/FixCachePrototype",
-    package_dir={"": "src"},
-    packages=find_packages(where="src"),
+    packages=find_packages(),  # No 'where' parameter needed now
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
