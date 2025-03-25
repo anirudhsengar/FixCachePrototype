@@ -37,5 +37,3 @@ This document details the significant enhancements and extensions implemented in
 - 5-10% improved hit rates across multiple repositories
 - Better handling of evolving codebases where bug patterns change
 - More nuanced eviction decisions leading to more stable predictions
-
-### Risk
