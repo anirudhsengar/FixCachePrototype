@@ -19,8 +19,8 @@ from typing import List, Dict, Set, Tuple, Any, Optional, Union, Callable
 from collections import defaultdict, Counter
 
 # Internal imports
-from fixcache.repository import RepositoryAnalyzer
-from fixcache.utils import is_code_file, safe_divide
+from repository import RepositoryAnalyzer
+from utils import is_code_file, safe_divide
 
 # Setup logging
 logger = logging.getLogger(__name__)

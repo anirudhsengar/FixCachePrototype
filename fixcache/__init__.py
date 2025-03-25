@@ -19,12 +19,12 @@ __author__ = 'anirudhsengar'
 __license__ = 'Eclipse Public License 2.0'
 
 # Import core components for convenient access
-from fixcache.algorithm import FixCache
-from fixcache.repository import RepositoryAnalyzer
-from fixcache.visualization import visualize_results, plot_cache_optimization
+from .algorithm import FixCache
+from .repository import RepositoryAnalyzer
+from .visualization import visualize_results, plot_cache_optimization
 
 # Utility functions for easy access
-from fixcache.utils import optimize_cache_size, compare_repositories
+from .utils import optimize_cache_size, compare_repositories
 
 # Type aliases for documentation
 HitRate = float

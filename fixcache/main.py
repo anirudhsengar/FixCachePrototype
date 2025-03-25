@@ -18,9 +18,9 @@ import datetime
 from typing import List, Dict, Any, Optional, Tuple
 
 # Import components from the package
-from fixcache.algorithm import FixCache
-from fixcache.utils import optimize_cache_size, compare_repositories
-from fixcache.visualization import visualize_results, plot_cache_optimization
+from algorithm import FixCache
+from utils import optimize_cache_size, compare_repositories
+from visualization import visualize_results, plot_cache_optimization
 from fixcache import __version__
 
 # Configure logging
