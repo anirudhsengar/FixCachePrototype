@@ -1,0 +1,120 @@
+# FixCache Bug Prediction GitHub Action
+# Author: anirudhsengar
+# This action runs FixCache on pull requests to predict bug-prone files
+
+name: FixCache Bug Prediction
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  predict:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write  # Needed to comment on PRs
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Full git history is needed for analysis
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install git+https://github.com/anirudhsengar/FixCachePrototype.git
+
+      - name: Run FixCache prediction
+        id: fixcache
+        run: |
+          # Run prediction and capture output
+          fixcache --repo-path . --output-file fixcache_results.json
+          
+          # Extract key metrics for PR comment
+          echo "hit_rate=$(python -c "import json; print(json.load(open('fixcache_results.json'))['hit_rate'])")" >> $GITHUB_OUTPUT
+          
+          # Get list of top 5 files
+          echo "top_files<<EOF" >> $GITHUB_OUTPUT
+          python -c "
+          import json
+          f = json.load(open('fixcache_results.json'))
+          for file in f['top_files'][:5]:
+              print('- ' + file['file_path'] + ' (' + str(file['bug_fixes']) + ' bug fixes)')
+          " >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Upload prediction results
+        uses: actions/upload-artifact@v3
+        with:
+          name: fixcache-results
+          path: |
+            fixcache_results.json
+            fixcache_results.png
+
+      - name: Find changed files in PR
+        id: changed_files
+        run: |
+          # Get list of files changed in PR
+          PR_FILES=$(gh pr view ${{ github.event.pull_request.number }} --json files -q '.files[].path' | tr '\n' ' ')
+          echo "files=$PR_FILES" >> $GITHUB_OUTPUT
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Comment PR
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const hitRate = parseFloat('${{ steps.fixcache.outputs.hit_rate }}').toFixed(2);
+            const topFiles = `${{ steps.fixcache.outputs.top_files }}`;
+            const changedFiles = '${{ steps.changed_files.outputs.files }}'.split(' ');
+            
+            // Check if any predicted bug-prone files are in the PR
+            const bugProneFiles = topFiles.split('\n').map(line => {
+              const match = line.match(/- (.*?) \(/);
+              return match ? match[1] : null;
+            }).filter(Boolean);
+            
+            const riskFiles = bugProneFiles.filter(file => 
+              changedFiles.some(changedFile => changedFile.includes(file))
+            );
+            
+            // Create warning section if needed
+            let warning = '';
+            if (riskFiles.length > 0) {
+              warning = `### ⚠️ Warning: This PR modifies files that are predicted to be bug-prone
+              
+              The following high-risk files are modified in this PR:
+              ${riskFiles.map(file => `- ${file}`).join('\n')}
+              
+              Consider extra testing and code review for these files.
+              `;
+            }
+            
+            const comment = `## 🔍 FixCache Bug Prediction Results
+            
+            FixCache predicts files that might contain bugs with a **${hitRate}%** hit rate.
+            
+            ### Top 5 files most likely to contain bugs:
+            ${topFiles}
+            
+            ${warning}
+            
+            [View detailed results](${context.payload.repository.html_url}/actions/runs/${context.runId})
+            
+            *Analysis generated: ${new Date().toISOString().split('T')[0]} by [FixCachePrototype](https://github.com/anirudhsengar/FixCachePrototype)*`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
