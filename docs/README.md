@@ -1,41 +1,56 @@
-# GlitchWitcher: AI-Assisted Bug Prediction
-A Python-based project for the GlitchWitcher GSoC 2025 initiative, focusing on predicting source code defects using two approaches: the FixCache algorithm (Approach A) and the Reconstruction Error Probability Distribution (REPD) model (Approach B). The project aims to trial these methods, compare their effectiveness, and integrate them into development workflows to enhance code quality during reviews and testing.
+# FixCachePrototype: Enhanced Bug Prediction Tool
 
-## Project Overview
-The "GlitchWitcher: AI-assisted Bug Prediction" project is part of Google Summer of Code (GSoC) 2025, hosted under the Eclipse Adoptium and OpenJ9 projects. The primary goal is to implement and compare two defect prediction approaches to identify fault-prone files in source code repositories before code reviews or testing phases. By integrating these approaches as static analysis utilities, the project seeks to flag areas needing scrutiny, ultimately improving software reliability.
+![Python Versions](https://img.shields.io/badge/python-3.7%20%7C%203.8%20%7C%203.9%20%7C%203.10-blue)
 
-### Objectives
-- **Trial Two Approaches**:
-  - **Approach A**: Implement the FixCache algorithm from "Predicting Faults from Cached History" (Kim et al., 2007) to predict defect-prone files using temporal and spatial localities.
-  - **Approach B**: Reproduce the REPD model (a supervised anomaly detection/classification method) as described in research paper, applying it to datasets and C/C++ codebases. (TODO)
-- **Compare Approaches**: Evaluate whether FixCache and REPD identify the same files as defect-prone in a given codebase.
-- **Integrate into Workflows**: Develop a verification check (GlitchWitcher workflow) that runs these utilities against pull requests in repositories.
-- **Enhance Code Quality**: Provide actionable insights for code reviews and testing by flagging high-risk files.
+## Overview
 
-### Expected Outcomes
-- Two static analysis utilities for defect prediction.
-- A comparison of FixCache and REPD approaches, assessing their overlap in identifying defect-prone files.
-- An automated verification check integrated into repository workflows (e.g., GitHub Actions).
-- Improved scrutiny during code reviews and testing, focusing on high-risk areas.
+FixCachePrototype is an enhanced implementation of the FixCache algorithm for predicting fault-prone files in software repositories. This project revives and extends the original [BugTools](https://github.com/adoptium/aqa-test-tools/tree/master/BugPredict/BugTool) prototype developed by the Adoptium project, with significant improvements in accuracy, robustness, and usability.
 
-## Features
-- **FixCache Algorithm (Approach A)**:
-  - Predicts fault-prone files based on temporal and spatial localities.
-  - Configurable cache size: 20% of files, with a BUG (Belady’s Optimal) replacement policy.
-  - Reports the top 10 files most likely to contain defects.
-- **Planned REPD Model (Approach B)**:
-  - Utilizes supervised anomaly detection/classification to categorize defective and non-defective code.
-  - Will be trained on NASA ESDS Data Metrics datasets and applied to C/C++ repositories like OpenJ9 or OpenJDK.
-- **Workflow Integration**:
-  - Designed to run as a verification check on pull requests, with potential cadence at every new tag.
-- **Multi-Repository Support**:
-  - Tested on large, active repositories (e.g., `https://github.com/openjdk/jdk`) and small, less active ones (e.g., hypothetical `https://github.com/example/small-jdk-utils`).
+This implementation is part of the GlitchWitcher project for Google Summer of Code 2025 with Eclipse Foundation, focusing on AI-assisted bug prediction using multiple approaches.
 
-## Findings
-Preliminary results from applying the FixCache algorithm (Approach A) to two repositories reveal significant variations in hit rates: a hit rate of 92.02% for the OpenJ9 repository (`https://github.com/eclipse-openj9/openj9`) and 63.51% for the OpenJDK repository (`https://github.com/adoptium/jdk`). These findings, detailed further in the `diagnosis_summary.md` file, suggest that FixCache performs exceptionally well in the highly active OpenJ9 codebase but shows moderate effectiveness in the OpenJDK repository, potentially indicating a dependency on repository activity levels. Additional analysis and comparison with Approach B are planned to validate these observations.
+## Key Features
+
+- **Accurate Bug Prediction**: Identifies files most likely to contain bugs based on historical bug-fixing patterns
+- **Multiple Cache Policies**: Supports BUG, FIFO, and LRU cache replacement policies
+- **Cache Size Optimization**: Automatically finds the optimal cache size for maximum hit rate
+- **Rich Visualizations**: Generates charts and visualizations of prediction results
+- **Repository Comparison**: Compare bug prediction across different repositories
+- **GitHub Action Integration**: Run predictions automatically on pull requests
+- **Robust Error Handling**: Gracefully handles encoding issues and edge cases
+
+## How It Works
+
+FixCachePrototype implements the FixCache algorithm described in the paper ["Predicting Faults from Cached History"](https://web.cs.ucdavis.edu/~devanbu/teaching/289/Schedule_files/Kim-Predicting.pdf) by Sunghun Kim et al. The algorithm works as follows:
+
+1. **Repository Analysis**: Extract commit history and identify bug-fixing commits
+2. **Cache Initialization**: Seed the cache with the most bug-prone files
+3. **Sliding Window Training**: Learn from historical bug patterns
+4. **Bug Prediction**: Predict future bug-prone files based on learned patterns
+5. **Performance Evaluation**: Calculate hit rate and identify top fault-prone files
+
+## Enhancements Over Original Implementation
+
+This implementation includes several significant enhancements over the original BugTools prototype:
+
+1. **Improved Bug Detection**: Enhanced heuristics and patterns for identifying bug-fixing commits
+2. **Sliding Window Approach**: Better prediction through temporal learning
+3. **Robust Encoding Handling**: Properly handles repositories with non-standard character encodings
+4. **Visualization Components**: Rich graphical representations of results
+5. **Cache Size Optimization**: Automatically finds the optimal cache configuration
+6. **Comprehensive Documentation**: Detailed explanation of algorithm and usage
+7. **Modernized Codebase**: Follows Python best practices with type hints and modular design
+8. **Repository Comparison Tools**: Compare prediction performance across repositories
+9. **GitHub Action Integration**: Automated analysis for continuous integration
 
 ## Installation
-To set up the project environment, install the required dependencies:
 
 ```bash
-pip install PyGithub pandas numpy
+# Clone the repository
+git clone https://github.com/anirudhsengar/FixCachePrototype.git
+cd FixCachePrototype
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Install the package in development mode
+pip install -e .
