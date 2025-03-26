@@ -11,7 +11,7 @@ setup(
     name="fixcache",
     version="0.1.0",
     author="anirudhsengar",
-    author_email="anirudhsengar@gmail.com",
+    author_email="anirudhsengar3@gmail.com",
     description="A tool for bug prediction using the FixCache algorithm",
     long_description=open("README.md", "r", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
