@@ -12,6 +12,8 @@ Key findings:
 - Larger, more mature repositories (openj9, openjdk) showed more stable prediction patterns
 - Cache hit rates ranged from 42% to 76%, depending on repository characteristics and algorithm parameters
 
+![Repository Comparison](../test_results/repos_comparison.png)
+
 ## 1. Introduction
 
 ### 1.1 FixCache Algorithm Overview
@@ -61,6 +63,8 @@ The buildship repository showed moderate bug prediction capability, with the fol
 - **Bug Fix Commits:** 518 (16.6% of total commits)
 - **Default Cache Size (20%):** 168 files
 - **Hit Rate with BUG policy:** 58.7%
+
+![Buildship Analysis](../test_results/buildship_viz.png)
 
 Top bug-prone files were concentrated in the core functionality and UI components, particularly:
 - `org.eclipse.buildship.core/src/main/java/org/eclipse/buildship/core/internal/workspace/WorkspaceOperations.java`
@@ -125,6 +129,8 @@ The openjdk repository, the largest of the three, showed:
 - **Bug Fix Commits:** 836 (41.8% of analyzed commits)
 - **Default Cache Size (20%):** 2,497 files
 - **Hit Rate with BUG policy:** 76.1%
+
+![OpenJDK Analysis](../test_results/openjdk_viz.png)
 
 Top bug-prone files were concentrated in:
 - Core libraries implementation
