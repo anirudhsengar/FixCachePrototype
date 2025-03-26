@@ -97,6 +97,8 @@ The openj9 repository, being a larger and more complex codebase, showed differen
 - **Bug Fix Commits:** 742 (37.1% of analyzed commits)
 - **Default Cache Size (20%):** 1,587 files
 - **Hit Rate with BUG policy:** 72.4%
+- 
+![OpenJ9 Analysis](../test_results/openj9_viz.png)
 
 Top bug-prone files were concentrated in:
 - Core runtime components
