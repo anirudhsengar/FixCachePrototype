@@ -3,6 +3,7 @@
 ![Version](https://img.shields.io/badge/version-0.1.0-blue)
 ![Python](https://img.shields.io/badge/python-3.8+-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-green)
+![Status](https://img.shields.io/badge/status-prototype-orange.svg)
 
 A Python implementation of the FixCache algorithm for bug prediction in software repositories. This is a prototype developed for the GlitchWitcher GSOC 2025 project.
 
